@@ -1,0 +1,436 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>tomcat源码 &lt;一&gt; - Wings的博客</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Wings&#39;s Blog,"> 
+    <meta name="description" content="&amp;lt;一&amp;gt; 初始化和启动 
+Bootstrap类的main方法if (daemon == null) {
+        // Don&amp;apos;t set daemon until ini,"> 
+    <meta name="author" content="Wings"> 
+    <link rel="alternative" href="atom.xml" title="Wings的博客" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+	<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Wings的博客</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="iconfont icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="iconfont icon-play"></div>
+    <h3 class="subtitle">tomcat源码 <一></h3>
+    <div class="social">
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="iconfont icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">tomcat源码 <一></h1>
+        <div class="stuff">
+            <span>九月 19, 2018</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/Tomcat/" rel="tag">Tomcat</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p>&lt;一&gt; 初始化和启动<br> <a id="more"></a></p>
+<h4 id="Bootstrap类的main方法"><a href="#Bootstrap类的main方法" class="headerlink" title="Bootstrap类的main方法"></a>Bootstrap类的main方法</h4><pre><code>if (daemon == null) {
+        // Don&apos;t set daemon until init() has completed
+        Bootstrap bootstrap = new Bootstrap();
+        try {
+            bootstrap.init();
+        } catch (Throwable t) {
+            handleThrowable(t);
+            t.printStackTrace();
+            return;
+        }
+        daemon = bootstrap;
+    } else {
+        // When running as a service the call to stop will be on a new
+        // thread so make sure the correct class loader is used to prevent
+        // a range of class not found exceptions.
+        Thread.currentThread().setContextClassLoader(daemon.catalinaLoader);
+    }
+
+    try {
+        String command = &quot;start&quot;;
+        if (args.length &gt; 0) {
+            command = args[args.length - 1];
+        }
+
+        if (command.equals(&quot;startd&quot;)) {
+            args[args.length - 1] = &quot;start&quot;;
+            daemon.load(args);
+            daemon.start();
+        } else if (command.equals(&quot;stopd&quot;)) {
+            args[args.length - 1] = &quot;stop&quot;;
+            daemon.stop();
+        } else if (command.equals(&quot;start&quot;)) {
+            daemon.setAwait(true);
+            daemon.load(args);
+            daemon.start();
+        } else if (command.equals(&quot;stop&quot;)) {
+            daemon.stopServer(args);
+        } else if (command.equals(&quot;configtest&quot;)) {
+            daemon.load(args);
+            if (null==daemon.getServer()) {
+                System.exit(1);
+            }
+            System.exit(0);
+        } else {
+            log.warn(&quot;Bootstrap: command \&quot;&quot; + command + &quot;\&quot; does not exist.&quot;);
+        }</code></pre><p>###实例了Bootstrap对象同时调用init,load,start方法</p>
+<hr>
+<h4 id="init方法主要做的事情有"><a href="#init方法主要做的事情有" class="headerlink" title="init方法主要做的事情有:"></a>init方法主要做的事情有:</h4><p>1.初始化类加载器<br>2.设置Catalina对象</p>
+<hr>
+<h6 id="类加载器结构"><a href="#类加载器结构" class="headerlink" title="类加载器结构"></a>类加载器结构</h6><p>  <img src="http://img2.tbcdn.cn/L1/461/1/34a7db9c6b3a180d8aabedb5c09e6d1c0de23953" alt="classLoader"></p>
+<hr>
+<h5 id="初始化类加载器-initClassLoaders具体实现方法如下"><a href="#初始化类加载器-initClassLoaders具体实现方法如下" class="headerlink" title="初始化类加载器 initClassLoaders具体实现方法如下"></a>初始化类加载器 initClassLoaders具体实现方法如下</h5><pre><code>private void initClassLoaders() {
+    try {
+        commonLoader = createClassLoader(&quot;common&quot;, null);
+        if( commonLoader == null ) {
+            // no config file, default to this loader - we might be in a &apos;single&apos; env.
+            commonLoader=this.getClass().getClassLoader();
+        }
+        catalinaLoader = createClassLoader(&quot;server&quot;, commonLoader);
+        sharedLoader = createClassLoader(&quot;shared&quot;, commonLoader);
+    } catch (Throwable t) {
+        handleThrowable(t);
+        log.error(&quot;Class loader creation threw exception&quot;, t);
+        System.exit(1);
+    }
+}</code></pre><hr>
+<h5 id="在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法"><a href="#在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法" class="headerlink" title="在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法"></a>在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法</h5><pre><code>//反射创建Catalina
+Class&lt;?&gt; startupClass =
+    catalinaLoader.loadClass
+    (&quot;org.apache.catalina.startup.Catalina&quot;);
+Object startupInstance = startupClass.newInstance();
+
+// Set the shared extensions class loader
+if (log.isDebugEnabled())
+    log.debug(&quot;Setting startup class properties&quot;);
+String methodName = &quot;setParentClassLoader&quot;;
+Class&lt;?&gt; paramTypes[] = new Class[1];
+paramTypes[0] = Class.forName(&quot;java.lang.ClassLoader&quot;);
+Object paramValues[] = new Object[1];
+paramValues[0] = sharedLoader;
+Method method =
+    startupInstance.getClass().getMethod(methodName, paramTypes);
+method.invoke(startupInstance, paramValues);
+//设置Bootstrap的catalina对象的父classLoader为sharedLoader
+catalinaDaemon = startupInstance;</code></pre><hr>
+<h4 id="接着通过反射调用了Catalina的load方法"><a href="#接着通过反射调用了Catalina的load方法" class="headerlink" title="接着通过反射调用了Catalina的load方法"></a>接着通过反射调用了Catalina的load方法</h4><p>load方法主要做了以下操作<br>1.设置了catalina相关的路径<br>2.初始化命名服务的相关配置<br>3.生成Digester对象用来解析server.xml。这个解析完成了connector和container等的初始化工作<br>4.Server调用init初始化声明周期，其父类LifecycleMBeanBase实现</p>
+<hr>
+<p>相关实现如下:    </p>
+<pre><code>  public void load() {
+
+    long t1 = System.nanoTime();
+
+    //获得相关系统环境变量, CATALINA_BASE和CATALINA_HOME的设置
+    initDirs();
+
+   // 初始化命名服务的基本配置  ,这里没细看!
+    initNaming();
+
+    //生成Digester对象。Digester类负责对server.xml进行解析
+    //createStartDigester方法主要的作用:实例化了所有的服务组件包括server,service和connect,没细
+    Digester digester = createStartDigester();
+
+    InputSource inputSource = null;
+    InputStream inputStream = null;
+    File file = null;
+    try {
+        try {
+            //server.xml放入输入流，后面通过digester.parse方法进行解析
+            file = configFile();
+            inputStream = new FileInputStream(file);
+            inputSource = new InputSource(file.toURI().toURL().toString());
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug(sm.getString(&quot;catalina.configFail&quot;, file), e);
+            }
+        }
+        if (inputStream == null) {
+            try {
+                inputStream = getClass().getClassLoader()
+                    .getResourceAsStream(getConfigFile());
+                inputSource = new InputSource
+                    (getClass().getClassLoader()
+                     .getResource(getConfigFile()).toString());
+            } catch (Exception e) {
+                if (log.isDebugEnabled()) {
+                    log.debug(sm.getString(&quot;catalina.configFail&quot;,
+                            getConfigFile()), e);
+                }
+            }
+        }
+
+        // This should be included in catalina.jar
+        // Alternative: don&apos;t bother with xml, just create it manually.
+        if (inputStream == null) {
+            try {
+                inputStream = getClass().getClassLoader()
+                        .getResourceAsStream(&quot;server-embed.xml&quot;);
+                inputSource = new InputSource
+                (getClass().getClassLoader()
+                        .getResource(&quot;server-embed.xml&quot;).toString());
+            } catch (Exception e) {
+                if (log.isDebugEnabled()) {
+                    log.debug(sm.getString(&quot;catalina.configFail&quot;,
+                            &quot;server-embed.xml&quot;), e);
+                }
+            }
+        }
+
+
+        if (inputStream == null || inputSource == null) {
+            if  (file == null) {
+                log.warn(sm.getString(&quot;catalina.configFail&quot;,
+                        getConfigFile() + &quot;] or [server-embed.xml]&quot;));
+            } else {
+                log.warn(sm.getString(&quot;catalina.configFail&quot;,
+                        file.getAbsolutePath()));
+                if (file.exists() &amp;&amp; !file.canRead()) {
+                    log.warn(&quot;Permissions incorrect, read permission is not allowed on the file.&quot;);
+                }
+            }
+            return;
+        }
+
+        try {
+                //解析配置文件的结构，将关系注入到对应的类，具体的解析流程没细看
+            inputSource.setByteStream(inputStream);
+            digester.push(this);
+            digester.parse(inputSource);
+        } catch (SAXParseException spe) {
+            log.warn(&quot;Catalina.start using &quot; + getConfigFile() + &quot;: &quot; +
+                    spe.getMessage());
+            return;
+        } catch (Exception e) {
+            log.warn(&quot;Catalina.start using &quot; + getConfigFile() + &quot;: &quot; , e);
+            return;
+        }
+    } finally {
+        if (inputStream != null) {
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
+    }
+
+    getServer().setCatalina(this);
+    getServer().setCatalinaHome(Bootstrap.getCatalinaHomeFile());
+    getServer().setCatalinaBase(Bootstrap.getCatalinaBaseFile());
+
+    // Stream redirection
+    initStreams();
+
+    // Start the new server
+    try {
+        getServer().init();
+    } catch (LifecycleException e) {
+        if (Boolean.getBoolean(&quot;org.apache.catalina.startup.EXIT_ON_INIT_FAILURE&quot;)) {
+            throw new java.lang.Error(e);
+        } else {
+            log.error(&quot;Catalina.start&quot;, e);
+        }
+    }
+
+    long t2 = System.nanoTime();
+    if(log.isInfoEnabled()) {
+        log.info(&quot;Initialization processed in &quot; + ((t2 - t1) / 1000000) + &quot; ms&quot;);
+    }
+}</code></pre><hr>
+<p>初始化等操作完成后，接着执行了Catalina实例的start方法。<em>根据上面的初始化配置</em>会将org.apache.catalina.core.StandardServer作为Server的实例类，调用了自己所有service(StandardService)的start方法(container,connector,executor的start方法)</p>
+<hr>
+<h2 id="StandardServer-java"><a href="#StandardServer-java" class="headerlink" title="StandardServer.java"></a>StandardServer.java</h2><pre><code>protected void startInternal() throws LifecycleException {
+
+    fireLifecycleEvent(CONFIGURE_START_EVENT, null);
+    setState(LifecycleState.STARTING);
+
+    globalNamingResources.start();
+
+    // Start our defined Services
+    synchronized (servicesLock) {
+        for (int i = 0; i &lt; services.length; i++) {
+            services[i].start();
+        }
+    }
+}</code></pre><hr>
+<h2 id="StandardService-java"><a href="#StandardService-java" class="headerlink" title="StandardService.java"></a>StandardService.java</h2><pre><code> protected void startInternal() throws LifecycleException {
+
+    if(log.isInfoEnabled())
+        log.info(sm.getString(&quot;standardService.start.name&quot;, this.name));
+    setState(LifecycleState.STARTING);
+
+    // Start our defined Container first
+    if (engine != null) {
+        synchronized (engine) {
+            engine.start();
+        }
+    }
+
+    synchronized (executors) {
+        for (Executor executor: executors) {
+            executor.start();
+        }
+    }
+
+    mapperListener.start();
+
+    // Start our defined Connectors second
+    synchronized (connectorsLock) {
+        for (Connector connector: connectors) {
+            // If it has already failed, don&apos;t try and start it
+            if (connector.getState() != LifecycleState.FAILED) {
+                connector.start();
+            }
+        }
+    }
+}</code></pre><hr>
+<hr>
+<p>可以看到，Boostrap调用Catalina的方法时，全部都用的是反射，包括生成Catalina对象。而在此部分中，tomcat将各种需要用到的参数进行了初始化，并且启动了Connector、Container、Executor。</p>
+<p>至此Tomcat启动完毕。</p>
+
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='https://link.hhtjim.com/xiami/1801852510.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+		data-enable='false'
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+        <div class='side'>
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#Bootstrap类的main方法"><span class="toc-number">1.</span> <span class="toc-text">Bootstrap类的main方法</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#init方法主要做的事情有"><span class="toc-number">2.</span> <span class="toc-text">init方法主要做的事情有:</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#类加载器结构"><span class="toc-number">2.0.1.</span> <span class="toc-text">类加载器结构</span></a></li></ol></li><li class="toc-item toc-level-5"><a class="toc-link" href="#初始化类加载器-initClassLoaders具体实现方法如下"><span class="toc-number">2.1.</span> <span class="toc-text">初始化类加载器 initClassLoaders具体实现方法如下</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法"><span class="toc-number">2.2.</span> <span class="toc-text">在初始化类加载器后通过反射创建Catalina对象并调用setParentClassLoader方法</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#接着通过反射调用了Catalina的load方法"><span class="toc-number">3.</span> <span class="toc-text">接着通过反射调用了Catalina的load方法</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#StandardServer-java"><span class="toc-number"></span> <span class="toc-text">StandardServer.java</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#StandardService-java"><span class="toc-number"></span> <span class="toc-text">StandardService.java</span></a>	
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/typed.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+</html>

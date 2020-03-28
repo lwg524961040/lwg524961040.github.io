@@ -1,0 +1,242 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JAVA类加载器 - Wings的博客</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Wings&#39;s Blog,"> 
+    <meta name="description" content="对java类加载器的介绍 
+类加载器的机制委托机制类加载机制的结构 类加载的定义:.java文件经过编译.class文件，在需要被使用时，虚拟机会创建对应class对象，并将对应的class文件加载,"> 
+    <meta name="author" content="Wings"> 
+    <link rel="alternative" href="atom.xml" title="Wings的博客" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+	<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Wings的博客</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="iconfont icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="iconfont icon-play"></div>
+    <h3 class="subtitle">JAVA类加载器</h3>
+    <div class="social">
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="iconfont icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">JAVA类加载器</h1>
+        <div class="stuff">
+            <span>九月 22, 2018</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/JAVA/" rel="tag">JAVA</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p>对java类加载器的介绍<br> <a id="more"></a></p>
+<h4 id="类加载器的机制"><a href="#类加载器的机制" class="headerlink" title="类加载器的机制"></a>类加载器的机制</h4><h5 id="委托机制"><a href="#委托机制" class="headerlink" title="委托机制"></a>委托机制</h5><h4 id="类加载机制的结构"><a href="#类加载机制的结构" class="headerlink" title="类加载机制的结构"></a>类加载机制的结构</h4><p> 类加载的定义:.java文件经过编译.class文件，在需要被使用时，虚拟机会创建对应class对象，并将对应的class文件加载到虚拟机内存中</p>
+<p> <img src="https://img-blog.csdn.net/20170430160610299?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamF2YXplamlhbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="classLoader"><br> 加载：根据完全限定的路径来查找对应类的字节码文件，并建立其Class对象。<br> 验证：确保Class文件的字节流中信息符合要求。<br> 准备：为静态变量分配内存并初始化为默认值。<br> 解析：主要将常量池中的符号引用替换为直接引用的过程。<br> 初始化：如果该类有父类，则对其进行初始化，并对静态变量进行赋值.</p>
+<hr>
+<p> Bootstrap class loader:用于加载jvm自身需要的类,(jre/lib/rt.jar).加载Extension class loader和Application class loader，并指定他们的父类加载器，在java中获取不到。 </p>
+<p> Extension class loader:加载java的扩展库(jre/ext/*.jar).Java 虚拟机的实现会提供一个扩展库目录。该类加载器在此目录里面查找并加载 Java 类。 </p>
+<p> System class loader:它根据 Java 应用的类路径（CLASSPATH）来加载 Java 类。一般来说，Java 应用的类都是由它来完成加载的。可以通过 ClassLoader.getSystemClassLoader()来获取它。</p>
+<p> <img src="https://img-blog.csdn.net/20170625231013755?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamF2YXplamlhbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="picture"></p>
+<pre><code>public class testClassLoader {
+@Test
+public void test(){
+    //application class loader
+    System.out.println(ClassLoader.getSystemClassLoader());
+    //extensions class loader
+    System.out.println(ClassLoader.getSystemClassLoader().getParent());
+    //bootstrap class loader  输出为 null
+    System.out.println(ClassLoader.getSystemClassLoader().getParent().getParent());
+    }
+}</code></pre><p>运行结果为：</p>
+<pre><code>sun.misc.Launcher$AppClassLoader@18b4aac2
+sun.misc.Launcher$ExtClassLoader@60e53b93
+null</code></pre><hr>
+<h5 id="双亲委派机制-保证java核心库的安全性（自己写一个java-lang-Integer-双亲委托模式传递到启动类加载器，而启动类加载器在核心Java-API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java-lang-Integer，而直接返回已加载过的Integer-class"><a href="#双亲委派机制-保证java核心库的安全性（自己写一个java-lang-Integer-双亲委托模式传递到启动类加载器，而启动类加载器在核心Java-API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java-lang-Integer，而直接返回已加载过的Integer-class" class="headerlink" title="双亲委派机制:　保证java核心库的安全性（自己写一个java.lang.Integer,双亲委托模式传递到启动类加载器，而启动类加载器在核心Java API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java.lang.Integer，而直接返回已加载过的Integer.class)"></a>双亲委派机制:　保证java核心库的安全性（自己写一个java.lang.Integer,双亲委托模式传递到启动类加载器，而启动类加载器在核心Java API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java.lang.Integer，而直接返回已加载过的Integer.class)</h5><p>某个特定的类加载器在接到加载类的请求时，首先将加载任务委托交给父类加载器，父类加载器又将加载任务向上委托，直到最父类加载器，如果最父类加载器可以完成类加载任务，就成功返回，如果不行就向下传递委托任务，由其子类加载器进行加载。    </p>
+<p><img src="https://img-blog.csdn.net/20170620083557702?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamF2YXplamlhbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="pic"></p>
+<p>ClassLoader类中的几个重要方法</p>
+<pre><code>  protected Class&lt;?&gt; loadClass(String name, boolean resolve)
+    throws ClassNotFoundException
+{
+    synchronized (getClassLoadingLock(name)) {
+        // 先从缓存查找该class对象，找到就不用重新加载
+        Class&lt;?&gt; c = findLoadedClass(name);
+        if (c == null) {
+            long t0 = System.nanoTime();
+            try {
+                if (parent != null) {
+                    //如果找不到，则委托给父类加载器去加载
+                    c = parent.loadClass(name, false);
+                } else {
+                //如果没有父类，则委托给Bootstrap class loader去加载
+                    c = findBootstrapClassOrNull(name);
+                }
+            } catch (ClassNotFoundException e) {
+                // ClassNotFoundException thrown if class not found
+                // from the non-null parent class loader
+            }
+
+            if (c == null) {
+                // If still not found, then invoke findClass in order
+                // 如果都没有找到，则通过自定义实现的findClass去查找并加载
+                c = findClass(name);
+
+                // this is the defining class loader; record the stats
+                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                sun.misc.PerfCounter.getFindClasses().increment();
+            }
+        }
+        if (resolve) {//是否需要在加载时进行解析
+            resolveClass(c);
+        }
+        return c;
+    }
+}</code></pre><p>通常通过重写findClass方法来自定义类加载器。获取.class文件的字节数组，调用defineClass方法将字节流转化为Class类对象</p>
+<hr>
+<p>####线程上下文类加载器<br>在Java应用中存在着很多服务提供者接口（Service Provider Interface，SPI），这些接口允许第三方为它们提供实现，如常见的 SPI 有 JDBC、JNDI等，这些 SPI 的接口属于 Java 核心库，一般存在rt.jar包中，由Bootstrap类加载器加载，而 SPI 的第三方实现代码则是作为Java应用所依赖的 jar 包被存放在classpath路径下，由于SPI接口中的代码经常需要加载具体的第三方实现类并调用其相关方法，但SPI的核心接口类是由引导类加载器来加载的，而Bootstrap类加载器无法直接加载SPI的实现类，同时由于双亲委派模式的存在，Bootstrap类加载器也无法反向委托AppClassLoader加载器SPI的实现类。在这种情况下，我们就需要一种特殊的类加载器来加载第三方的类库，而线程上下文类加载器就是很好的选择。 </p>
+<p>线程上下文类加载器（contextClassLoader）是从 JDK 1.2 开始引入的，我们可以通过java.lang.Thread类中的getContextClassLoader()和 setContextClassLoader(ClassLoader cl)方法来获取和设置线程的上下文类加载器。如果没有手动设置上下文类加载器，线程将继承其父线程的上下文类加载器，初始线程的上下文类加载器是系统类加载器（AppClassLoader）,在线程中运行的代码可以通过此类加载器来加载类和资源，如下图所示，以jdbc.jar加载为例</p>
+<p><img src="https://img-blog.csdn.net/20170625143404387?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamF2YXplamlhbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="break"></p>
+
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='https://link.hhtjim.com/xiami/1801852510.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+		data-enable='false'
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+        <div class='side'>
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#类加载器的机制"><span class="toc-number">1.</span> <span class="toc-text">类加载器的机制</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#委托机制"><span class="toc-number">1.1.</span> <span class="toc-text">委托机制</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#类加载机制的结构"><span class="toc-number">2.</span> <span class="toc-text">类加载机制的结构</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#双亲委派机制-保证java核心库的安全性（自己写一个java-lang-Integer-双亲委托模式传递到启动类加载器，而启动类加载器在核心Java-API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java-lang-Integer，而直接返回已加载过的Integer-class"><span class="toc-number">2.1.</span> <span class="toc-text">双亲委派机制:　保证java核心库的安全性（自己写一个java.lang.Integer,双亲委托模式传递到启动类加载器，而启动类加载器在核心Java API发现这个名字的类，发现该类已被加载，并不会重新加载网络传递的过来的java.lang.Integer，而直接返回已加载过的Integer.class)</span></a></li></ol></li></ol>	
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/typed.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+</html>

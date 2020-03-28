@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>tomcat学习笔记 &lt;一&gt;连接器 - Wings的博客</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Wings&#39;s Blog,"> 
+    <meta name="description" content=" 连接器的重点内容记录
+ 
+
+
+&amp;lt;一&amp;gt; HttpConnector类
+HttpConnector类中最重要的方法有两个.start和run.
+HttpConnector类中还有一个ini,"> 
+    <meta name="author" content="Wings"> 
+    <link rel="alternative" href="atom.xml" title="Wings的博客" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+	<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Wings的博客</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="iconfont icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="iconfont icon-play"></div>
+    <h3 class="subtitle">tomcat学习笔记 <一>连接器</h3>
+    <div class="social">
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="iconfont icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">tomcat学习笔记 <一>连接器</h1>
+        <div class="stuff">
+            <span>七月 17, 2019</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/Tomcat-Basic/" rel="tag">Tomcat-Basic</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p> 连接器的重点内容记录</p>
+ <a id="more"></a>
+
+
+<p>&lt;一&gt; HttpConnector类</p>
+<p>HttpConnector类中最重要的方法有两个.start和run.</p>
+<p>HttpConnector类中还有一个initialize类方法，该方法会从工厂中取得一个ServerSocketFactory实例，用该实例来创建ServerSocket实例,这里仅做简要介绍</p>
+<p>HttpConnector主要作用是用来监听并接收http请求、创建processor池用于处理http请求</p>
+<hr>
+<p>1.执行生命周期的start方法</p>
+<p>2.不断监听http请求的run方法</p>
+<hr>
+<p>start方法代码如下:</p>
+<p>start方法主要做了,创建所设置的最小processor以备使用。每创建一个processor都会开启一个独立的processor的处理线程,在其run方法中调用其await方法，等待请求,详情见HttpProcessor类。</p>
+<pre><code>public void start() throws LifecycleException {
+    // Validate and update our current state
+    if (started)
+        throw new LifecycleException
+            (sm.getString(&quot;httpConnector.alreadyStarted&quot;));
+    threadName = &quot;HttpConnector[&quot; + port + &quot;]&quot;;
+    lifecycle.fireLifecycleEvent(START_EVENT, null);
+    started = true;
+
+    // Start our background thread
+    threadStart();
+
+    // Create the specified minimum number of processors
+    while (curProcessors &lt; minProcessors) {
+        if ((maxProcessors &gt; 0) &amp;&amp; (curProcessors &gt;= maxProcessors))
+            break;
+        HttpProcessor processor = newProcessor();
+        recycle(processor);
+    }
+
+}</code></pre><p>run方法代码如下:<br>run方法比较重要的地方是 createProcessor方法和 assign方法.</p>
+<p>注意createProcessor方法通常并不新创建HttpProcessor对象，而是从预备processors池中取,只有在processors数量为0时 才会进行创建并直接返回。</p>
+<p>assign方法将socket封装成为属性，同时唤醒processor实例的处理线程，此处使用了类似互斥的原理来达到不同线程之间的交互。</p>
+<pre><code>public void run() {
+    // Loop until we receive a shutdown command
+    while (!stopped) {
+        // Accept the next incoming connection from the server socket
+        Socket socket = null;
+        try {
+            //                if (debug &gt;= 3)
+            //                    log(&quot;run: Waiting on serverSocket.accept()&quot;);
+            socket = serverSocket.accept();
+            //                if (debug &gt;= 3)
+            //                    log(&quot;run: Returned from serverSocket.accept()&quot;);
+            if (connectionTimeout &gt; 0)
+                socket.setSoTimeout(connectionTimeout);
+            socket.setTcpNoDelay(tcpNoDelay);
+        } .....
+        ......异常处理部分省略
+
+
+        // Hand this socket off to an appropriate processor
+
+        HttpProcessor processor = createProcessor();
+        if (processor == null) {
+            try {
+                log(sm.getString(&quot;httpConnector.noProcessor&quot;));
+                socket.close();
+            } catch (IOException e) {
+                ;
+            }
+            continue;
+        }
+        //            if (debug &gt;= 3)
+        //                log(&quot;run: Assigning socket to processor &quot; + processor);
+        processor.assign(socket);
+
+        // The processor will recycle itself when it finishes
+
+    }
+
+    // Notify the threadStop() method that we have shut ourselves down
+    //        if (debug &gt;= 3)
+    //            log(&quot;run: Notifying threadStop() that we have shut down&quot;);
+    synchronized (threadSync) {
+        threadSync.notifyAll();
+    }
+
+}</code></pre><p>&lt;二&gt; HttpProcessor类</p>
+<hr>
+<p>HttpProcessor类同时也实现了Runnable接口，将处理请求的部分运行在自己的线程中.在HttpProcessor实例被创建后马上就会调用start方法</p>
+<p>HttpProcessor类中最重要的方法有.start、run、assign、await和process.</p>
+<hr>
+<p>start方法如下:<br>调用生命周期”START_EVENT”事件，但是在当前章节并没有设置相应的监听器。后续会在Lifecycle笔记部分进行补充.然后做的事情就仅仅启动了处理线程</p>
+<pre><code> public void start() throws LifecycleException {
+
+    if (started)
+        throw new LifecycleException
+            (sm.getString(&quot;httpProcessor.alreadyStarted&quot;));
+    lifecycle.fireLifecycleEvent(START_EVENT, null);
+    started = true;
+
+    threadStart();
+
+}</code></pre><p>run方法如下:<br>run方法会在processor被创建后就马上执行。然后会调用await方法阻塞该线程。await方法和assign逻辑上是互斥了，在实际状态上看到的是一个被唤醒另一个进入阻塞。当前processor等待被唤醒，在被唤醒之后会进行处理socket请求,处理完成后将其回收.</p>
+<p>需要注意的是这里是while循环 在当前processor被回收后 ，其线程并没有停止,依旧会继续运行到await,继续等下下一个请求.</p>
+<pre><code>public void run() {
+
+    // Process requests until we receive a shutdown signal
+
+    while (!stopped) {
+
+        // Wait for the next socket to be assigned
+        //获取socket
+        Socket socket = await();
+        if (socket == null)
+            continue;
+
+        // Process the request from this socket
+        //处理socket
+        try {
+
+            process(socket);
+        } catch (Throwable t) {
+            log(&quot;process.invoke&quot;, t);
+        }
+
+        // Finish up this request
+        //processor回收入栈
+        connector.recycle(this);
+
+    }
+
+    // Tell threadStop() we have shut ourselves down successfully
+    synchronized (threadSync) {
+        threadSync.notifyAll();
+    }
+
+}</code></pre><p>await方法如下:</p>
+<p>await方法在执行后马上回进入阻塞状态。可以通过assign中 notifyAll()来唤醒。</p>
+<p>此处将processor实例的socket变量 this.socket 赋值给本地变量 Socket socket而不直接返回this.socket,由书中所述 目的在于解放this.socket，使实例变量可以继续赋值用于下一个socket但是，据发现 每个socket请求都会去重新取processor,所以在下一个socket2到来的时候 当前的socket所在的processor除非已经处理完毕进行回收，否则应该不会将socket2再次分配给当前的processor.所以这么做可能是为了保险起见，防止一些异常的发生。</p>
+<pre><code> private synchronized Socket await() {
+
+    // Wait for the Connector to provide a new Socket
+    while (!available) {
+        try {
+            wait();
+        } catch (InterruptedException e) {
+        }
+    }
+
+    // Notify the Connector that we have received this Socket
+
+
+    Socket socket = this.socket;
+
+
+    available = false;
+
+
+    notifyAll();
+
+    if ((debug &gt;= 1) &amp;&amp; (socket != null))
+        log(&quot;  The incoming request has been awaited&quot;);
+
+    return (socket);
+
+}</code></pre><p>assign方法如下:</p>
+<p>注意 assign的调用是在HttpConnector的主线程中，并没有在处理器线程.</p>
+<p>这里在收到socket后马上赋值给processor的实例变量this.socket。同时唤醒其他线程（processor所在的线程）</p>
+<pre><code>  synchronized void assign(Socket socket) {
+
+    // Wait for the Processor to get the previous Socket
+    while (available) {
+        try {
+            wait();
+        } catch (InterruptedException e) {
+        }
+    }
+
+    // Store the newly available Socket and notify our thread
+    this.socket = socket;
+    available = true;
+    notifyAll();
+
+    if ((debug &gt;= 1) &amp;&amp; (socket != null))
+        log(&quot; An incoming request is being assigned&quot;);
+
+}</code></pre>
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='https://link.hhtjim.com/xiami/1801852510.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+		data-enable='false'
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+        <div class='side'>
+				
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/typed.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+</html>

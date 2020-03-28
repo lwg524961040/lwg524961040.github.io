@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>spring揭秘 笔记 BeanFactory - Wings的博客</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Wings&#39;s Blog,"> 
+    <meta name="description" content="BeanFactory笔记 
+BeanFactory和 ApplicationContext 继承关系如下 
+ BeanFactory 是一个基础的IOC容器,默认采用lazy-load。只有当sp,"> 
+    <meta name="author" content="Wings"> 
+    <link rel="alternative" href="atom.xml" title="Wings的博客" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+	<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Wings的博客</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="iconfont icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="iconfont icon-play"></div>
+    <h3 class="subtitle">spring揭秘 笔记 BeanFactory</h3>
+    <div class="social">
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="iconfont icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">spring揭秘 笔记 BeanFactory</h1>
+        <div class="stuff">
+            <span>三月 24, 2020</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/spring/" rel="tag">spring</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p>BeanFactory笔记<br> <a id="more"></a></p>
+<h4 id="BeanFactory和-ApplicationContext"><a href="#BeanFactory和-ApplicationContext" class="headerlink" title="BeanFactory和 ApplicationContext"></a>BeanFactory和 ApplicationContext</h4><p> 继承关系如下<br> <img src="/2020/03/24/springIOC/IOC3.png" alt="03"></p>
+<p> BeanFactory 是一个基础的IOC容器,默认采用lazy-load。只有当spring管理的bean被访问时才会将其初始化和依赖注入等操作。</p>
+<p> ApplicationContext 在BeanFactory基础上进行构建,拥有BeanFactory所有支持,还扩展了例如国际化、事件发布等特性。启动时就完成所有初始化。</p>
+<hr>
+<p> BeanFactory 只是一个接口，DefaultListableBeanFactory是一个比较通用的 BeanFactory 实现类。<br> DefaultListableBeanFactory除了间接地实现了 BeanFactory 接口，还实现了 BeanDefinitionRegistry 接口，该接口才是在 BeanFactory 的实现中担当Bean注册管理的角色。</p>
+<p> 基本上，BeanFactory 接口只定义如何访问容器内管理的Bean的方法，各个 BeanFactory 的具体实现类负责具体Bean的注册以及管理工作。</p>
+<p> BeanDefinitionRegistry 接口定义抽象了Bean的注册逻辑。通常情况下，具体的 BeanFactory 实现类会实现这个接口来管理Bean的注册。</p>
+<p> <img src="/2020/03/24/springIOC/IOC4.png" alt="04"></p>
+<p> 每一个受管的对象，在容器中都会有一个 BeanDefinition 的实例与之相对应，该BeanDefinition 的实例负责保存对象的所有必要信息，包括其对应的对象的class类型、是否是抽象类、构造方法参数以及其他属性等。当客户端向 BeanFactory 请求相应对象的时候， BeanFactory 会通过这些信息为客户端返回一个完备可用的对象实例。<br>RootBeanDefinition 和 ChildBeanDefinition 是 BeanDefinition 的两个主要实现类。</p>
+<hr>
+<p> 容器启动阶段和实例化阶段</p>
+<p> <img src="/2020/03/24/springIOC/IOC2.png" alt="02"></p>
+<h5 id="启动阶段"><a href="#启动阶段" class="headerlink" title="启动阶段"></a>启动阶段</h5><p>通过注解或xml配置将信息组合成Beandefinition,注册要相应的BeanDefinitionRegistry。<br>该阶段所做的工作可以认为是准备性的，侧重于对象管理信息的收集。验证等辅助性工作也可以在这个阶段完成。</p>
+<h5 id="Bean实例化阶段"><a href="#Bean实例化阶段" class="headerlink" title="Bean实例化阶段"></a>Bean实例化阶段</h5><p>注册完成后，当某时刻有请求通过getBean方法请求某对象时,或者因为依赖关系需要调用getBean时，就会触发实例化阶段。<br>该阶段，容器会首先检查所请求的对象之前是否已经初始化。如果没有，则会根据注册的BeanDefinition 所提供的信息实例化被请求对象，并为其注入依赖。<br>如果该对象实现了某些回调接口，也会根据回调接口的要求来装配它。当该对象装配完毕之后，容器会立即将其返回请求方使用。 </p>
+
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='https://link.hhtjim.com/xiami/1801852510.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+		data-enable='false'
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+        <div class='side'>
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#BeanFactory和-ApplicationContext"><span class="toc-number">1.</span> <span class="toc-text">BeanFactory和 ApplicationContext</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#启动阶段"><span class="toc-number">1.1.</span> <span class="toc-text">启动阶段</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Bean实例化阶段"><span class="toc-number">1.2.</span> <span class="toc-text">Bean实例化阶段</span></a></li></ol></li></ol>	
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/typed.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+</html>
