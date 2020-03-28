@@ -81,7 +81,7 @@ BeanFactory和 ApplicationContext 继承关系如下
 <h5 id="Bean实例化阶段"><a href="#Bean实例化阶段" class="headerlink" title="Bean实例化阶段"></a>Bean实例化阶段</h5><p>注册完成后，当某时刻有请求通过getBean方法请求某对象时,或者因为依赖关系需要调用getBean时，就会触发实例化阶段。<br>该阶段，容器会首先检查所请求的对象之前是否已经初始化。如果没有，则会根据注册的BeanDefinition 所提供的信息实例化被请求对象，并为其注入依赖。<br>如果该对象实现了某些回调接口，也会根据回调接口的要求来装配它。当该对象装配完毕之后，容器会立即将其返回请求方使用。 </p>
 
             <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
-            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="false">
                 <source type="audio/mpeg" src="">
             </audio>
             
