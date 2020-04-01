@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Redis笔记 - Wings的博客</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Wings&#39;s Blog,"> 
+    <meta name="description" content="Redis 
+Redis介绍
+支持的数据类型redis支持5种数据类型1.字符串（strings）
+常规的set/get操作，value可以是String也可以是数字字符的二进制安全:redis中的,"> 
+    <meta name="author" content="Wings"> 
+    <link rel="alternative" href="atom.xml" title="Wings的博客" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+	<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Wings的博客</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="iconfont icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="iconfont icon-play"></div>
+    <h3 class="subtitle">Redis笔记</h3>
+    <div class="social">
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="iconfont icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">Redis笔记</h1>
+        <div class="stuff">
+            <span>四月 01, 2020</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/Redis/" rel="tag">Redis</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p>Redis<br> <a id="more"></a></p>
+<h2 id="Redis介绍"><a href="#Redis介绍" class="headerlink" title="Redis介绍"></a>Redis介绍</h2><hr>
+<h3 id="支持的数据类型"><a href="#支持的数据类型" class="headerlink" title="支持的数据类型"></a>支持的数据类型</h3><p>redis支持5种数据类型<br>1.字符串（strings）</p>
+<p>常规的set/get操作，value可以是String也可以是数字<br>字符的二进制安全:<br>redis中的SDS<br>struct sdshdr {</p>
+<p>int len;//记录buf数组大小</p>
+<p>int free;//记录buf数组还有多少可用空间</p>
+<p>char buf[];//字符串实体，保存字符串的内容</p>
+<p>};<br>C语言中，用“\0”表示字符串的结束，如果字符串中本身就有“\0”字符，字符串就会被截断，即非二进制安全；若通过某种机制，保证读写字符串时不损害其内容，则是二进制安全。</p>
+<p>进行数值操作时，redis会将字符串类型转换成数值。INCR、INCRBY、DECR、DECRBY等指令可实现原子效果</p>
+<p>2.字符串列表（lists）<br>链表实现<br>可以利用lists来实现一个消息队列，而且可以确保先后顺序</p>
+<p>3.字符串集合（sets）<br>放的是一堆不重复值的集合<br>利用交集、并集、差集等操作，可以计算共同喜好，全部的喜好，自己独有的喜好等功能</p>
+<p>4.有序字符串集合（sorted sets）<br>sorted set多了一个权重参数score,集合中的元素能够按score进行排列。可以进行排行。</p>
+<p>5.哈希（hashes）<br>value来存放结构化的对象，可以方便操作其中的字段</p>
+<hr>
+<h3 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h3><p> <img src="/2020/04/01/Redis%E7%AC%94%E8%AE%B0/rdb_aof.jpg" alt="01"></p>
+<h4 id="RDB"><a href="#RDB" class="headerlink" title="RDB"></a>RDB</h4><p>这个是redis采用的默认持久化方案。可以配置时间间隔定时将内存中数据写入硬盘(.rdb文件).通过加载rdb文件来恢复数据.<br>据说是由子线程来完成持久化操作,主线程无io操作。</p>
+<p>1、save命令：save命令会阻塞redis服务器的进程，直到RDB文件创建完，在该期间，redis不能处理任何的命令请求。<br>2、bgsave命令：bgsave在生成RDB文件时，会派生出一个子进程，子进程负责创建RDB文件，在此期间，主进程和子进程是同时存在的，因此不会阻塞redis服务器进程。</p>
+<p>RDB模式在两个写入间隔之间的数据会丢失。</p>
+<h4 id="AOF"><a href="#AOF" class="headerlink" title="AOF"></a>AOF</h4><p>Redis默认不开启。<br>记录执行操作的所有命令，重启时重新执行命令来恢复数据。<br>包括三个步骤  1.将执行成功的写操作 写入缓冲区.2.根据配置来将缓冲区文件写入.aof文件 3.aof文件重写，精简指令。进行AOF重写时，仍然是采用先写临时文件，全部完成后再替换。<br>AOF文件相比RDB更大恢复速度更慢。</p>
+<hr>
+<h3 id="主从复制模式"><a href="#主从复制模式" class="headerlink" title="主从复制模式"></a>主从复制模式</h3><p> <img src="/2020/04/01/Redis%E7%AC%94%E8%AE%B0/slave.jpg" alt="02"></p>
+<p> redis主从架构中，Master节点负责处理写请求，Slave节点只处理读请求。</p>
+<p> Master节点接收到写请求并处理后，需要告知Slave节点数据发生了改变，保持主从节点数据一致的行为称为主从同步。同步使用的是发布、订阅机制</p>
+<p>  <img src="/2020/04/01/Redis%E7%AC%94%E8%AE%B0/progress.jpg" alt="03"></p>
+<h4 id="完整复制"><a href="#完整复制" class="headerlink" title="完整复制"></a>完整复制</h4><p>1.slave 服务启动，slave 会建立和 master 的连接，发送 sync 命令。</p>
+<p>2.master 启动一个后台进程将数据库快照保存到 RDB 文件中</p>
+<p>注意：此时如果生成 RDB 文件过程中存在写数据操作会导致 RDB 文件和当前主 redis 数据不一致，所以此时 master 主进程会开始收集写命令并缓存起来。</p>
+<p>3.master 发送 RDB 文件给 slave</p>
+<p>4.slave 将文件保存到磁盘上，然后加载到内存恢复</p>
+<p>5.master 把缓存的命令转发给 slave</p>
+<h4 id="增量复制"><a href="#增量复制" class="headerlink" title="增量复制"></a>增量复制</h4><p>主服务器会在内存中维护一个缓冲区，缓冲区中存储着将要发给从服务器的内容。</p>
+<p>1.slave连接master时, slave就会把 master的runid(机器标识)和 数据的偏移位置（replication offset）发送出去。</p>
+<p>2.master接收到这样的同步请求后，首先会验证slave发送的runid是否和自己的ID匹配，其次主机会验证offset是否一致，如果两者都满足的话，主服务器就会向从服务器发送增量内容。</p>
+<p>增量同步功能，需要服务器端支持全新的PSYNC指令。这个指令，只有在redis-2.8之后才具有。</p>
+<p>  <img src="/2020/04/01/Redis%E7%AC%94%E8%AE%B0/part.jpg" alt="04"></p>
+<hr>
+<h3 id="to-be-continue"><a href="#to-be-continue" class="headerlink" title="to be continue"></a>to be continue</h3>
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="false">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='https://link.hhtjim.com/xiami/1801852510.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+		data-enable='false'
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+        <div class='side'>
+			<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis介绍"><span class="toc-number">1.</span> <span class="toc-text">Redis介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#支持的数据类型"><span class="toc-number">1.1.</span> <span class="toc-text">支持的数据类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#持久化"><span class="toc-number">1.2.</span> <span class="toc-text">持久化</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#RDB"><span class="toc-number">1.2.1.</span> <span class="toc-text">RDB</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#AOF"><span class="toc-number">1.2.2.</span> <span class="toc-text">AOF</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#主从复制模式"><span class="toc-number">1.3.</span> <span class="toc-text">主从复制模式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#完整复制"><span class="toc-number">1.3.1.</span> <span class="toc-text">完整复制</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#增量复制"><span class="toc-number">1.3.2.</span> <span class="toc-text">增量复制</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#to-be-continue"><span class="toc-number">1.4.</span> <span class="toc-text">to be continue</span></a></li></ol></li></ol>	
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/typed.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+</html>
